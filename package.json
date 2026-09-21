@@ -1,0 +1,16 @@
+{
+  "name": "mdtable-stream",
+  "version": "0.1.0",
+  "description": "Stream-based converter between Markdown tables and CSV",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mdtable": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p ."
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
