@@ -30,6 +30,13 @@ cat data.csv | node dist/cli.js csv-to-md > table.md
 cat table.md | node dist/cli.js md-to-csv > data.csv
 ```
 
+The CSV side defaults to a comma. Pass `--delimiter` (or `-d`) with a single
+character to use something else, e.g. a semicolon-delimited export:
+
+```
+cat data.csv | node dist/cli.js csv-to-md --delimiter ';' > table.md
+```
+
 As a library, piped straight from one file stream to another:
 
 ```ts
@@ -37,7 +44,7 @@ import { createReadStream, createWriteStream } from 'node:fs';
 import { CsvToMarkdown } from './src/csvToMarkdown.js';
 
 createReadStream('data.csv')
-  .pipe(new CsvToMarkdown())
+  .pipe(new CsvToMarkdown({ delimiter: ';' }))
   .pipe(createWriteStream('table.md'));
 ```
 
@@ -77,7 +84,8 @@ This is an early skeleton, not a finished tool:
   Markdown round trip.
 - A ragged CSV (a row with a different field count than the header) is
   padded or truncated rather than flagged.
-- Delimiter is always a comma; no TSV or custom-delimiter support yet.
+- No dedicated TSV mode yet (`--delimiter $'\t'` gets you tab-separated
+  fields, but the CLI doesn't special-case tab escaping or file extensions).
 - No CLI flag for reading/writing files directly (stdin/stdout only).
 
 ## License

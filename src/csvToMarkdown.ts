@@ -6,6 +6,11 @@ function forMarkdownCell(field: string): string {
   return field.replace(/\|/g, '\\|').replace(/\r\n|\r|\n/g, '<br>');
 }
 
+export interface CsvToMarkdownOptions {
+  /** Field delimiter used by the input CSV. Defaults to ','. */
+  delimiter?: string;
+}
+
 /**
  * Converts CSV (RFC 4180 quoting) to a Markdown table.
  *
@@ -18,6 +23,16 @@ export class CsvToMarkdown extends Transform {
   private buffered = '';
   private headerWritten = false;
   private columnCount = 0;
+  private readonly delimiter: string;
+
+  constructor(options: CsvToMarkdownOptions = {}) {
+    super();
+    const delimiter = options.delimiter ?? ',';
+    if (delimiter.length !== 1) {
+      throw new Error(`delimiter must be a single character, got ${JSON.stringify(delimiter)}`);
+    }
+    this.delimiter = delimiter;
+  }
 
   _transform(chunk: Buffer, _encoding: BufferEncoding, callback: TransformCallback): void {
     this.buffered += chunk.toString('utf8');
@@ -87,7 +102,7 @@ export class CsvToMarkdown extends Transform {
         i += 1;
         continue;
       }
-      if (ch === ',') {
+      if (ch === this.delimiter) {
         fields.push(current);
         current = '';
         i += 1;

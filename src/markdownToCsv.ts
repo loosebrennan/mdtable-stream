@@ -39,11 +39,18 @@ function splitRow(line: string): string[] {
   return cells;
 }
 
-function csvEscape(field: string): string {
-  if (/[",\n\r]/.test(field)) {
+function csvEscape(field: string, delimiter: string): string {
+  const needsQuoting =
+    field.includes('"') || field.includes(delimiter) || field.includes('\n') || field.includes('\r');
+  if (needsQuoting) {
     return `"${field.replace(/"/g, '""')}"`;
   }
   return field;
+}
+
+export interface MarkdownToCsvOptions {
+  /** Field delimiter used for the output CSV. Defaults to ','. */
+  delimiter?: string;
 }
 
 /**
@@ -54,6 +61,16 @@ function csvEscape(field: string): string {
  */
 export class MarkdownToCsv extends Transform {
   private buffered = '';
+  private readonly delimiter: string;
+
+  constructor(options: MarkdownToCsvOptions = {}) {
+    super();
+    const delimiter = options.delimiter ?? ',';
+    if (delimiter.length !== 1) {
+      throw new Error(`delimiter must be a single character, got ${JSON.stringify(delimiter)}`);
+    }
+    this.delimiter = delimiter;
+  }
 
   _transform(chunk: Buffer, _encoding: BufferEncoding, callback: TransformCallback): void {
     this.buffered += chunk.toString('utf8');
@@ -78,6 +95,6 @@ export class MarkdownToCsv extends Transform {
     if (trimmed.length === 0 || !trimmed.includes('|')) return;
     if (SEPARATOR_ROW.test(trimmed)) return;
     const cells = splitRow(line);
-    this.push(cells.map(csvEscape).join(',') + '\n');
+    this.push(cells.map((cell) => csvEscape(cell, this.delimiter)).join(this.delimiter) + '\n');
   }
 }
