@@ -1,4 +1,5 @@
 import { Transform, TransformCallback } from 'node:stream';
+import { Alignment, alignmentFromSeparatorCell } from './alignment.js';
 
 // A separator row looks like `| --- | :---: | ---: |`, with each cell being
 // dashes optionally flanked by colons for alignment. It carries no data.
@@ -63,6 +64,13 @@ export class MarkdownToCsv extends Transform {
   private buffered = '';
   private readonly delimiter: string;
 
+  /**
+   * Column alignments from the header separator row, once it has been read.
+   * CSV has nowhere to store them, so they are also emitted as an
+   * 'alignments' event for callers that want to feed them to CsvToMarkdown.
+   */
+  alignments: Alignment[] | undefined;
+
   constructor(options: MarkdownToCsvOptions = {}) {
     super();
     const delimiter = options.delimiter ?? ',';
@@ -93,7 +101,15 @@ export class MarkdownToCsv extends Transform {
     const line = rawLine.replace(/\r$/, '');
     const trimmed = line.trim();
     if (trimmed.length === 0 || !trimmed.includes('|')) return;
-    if (SEPARATOR_ROW.test(trimmed)) return;
+    if (SEPARATOR_ROW.test(trimmed)) {
+      // Only the first separator is the header's; a later one is just a
+      // dropped row and must not overwrite the real alignments.
+      if (this.alignments === undefined) {
+        this.alignments = splitRow(line).map(alignmentFromSeparatorCell);
+        this.emit('alignments', this.alignments);
+      }
+      return;
+    }
     const cells = splitRow(line);
     this.push(cells.map((cell) => csvEscape(cell, this.delimiter)).join(this.delimiter) + '\n');
   }

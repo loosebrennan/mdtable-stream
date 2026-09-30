@@ -75,13 +75,32 @@ Markdown out:
   generated under it.
 - **Markdown to CSV**: the header separator row is detected and dropped.
   `\|` inside a cell round-trips back to a literal `|` in the CSV.
+- **Alignment**: `MarkdownToCsv` reads the alignment markers (`:---`,
+  `:---:`, `---:`) from the separator row into its `alignments` property and
+  emits an `'alignments'` event. `CsvToMarkdown` takes an `alignments` option
+  (`'left' | 'center' | 'right' | 'none'` per column) and writes matching
+  markers. On the command line, use a comma-separated list:
+
+  ```
+  cat data.csv | node dist/cli.js csv-to-md --align left,center,right > table.md
+  ```
+
+  In a pipeline, wait for the event before building the second stream:
+
+  ```ts
+  const toCsv = new MarkdownToCsv();
+  toCsv.once('alignments', (alignments) => {
+    // use as CsvToMarkdown({ alignments }) later
+  });
+  ```
 
 ## Known limitations
 
 This is an early skeleton, not a finished tool:
 
-- Column alignment (`:---:`) isn't preserved across a Markdown → CSV →
-  Markdown round trip.
+- CSV has no place to store column alignment, so it can't survive a file
+  round trip on its own. The CLI takes `--align` for CSV → Markdown, and the
+  library exposes the alignments read by `MarkdownToCsv` (see above).
 - A ragged CSV (a row with a different field count than the header) is
   padded or truncated rather than flagged.
 - No dedicated TSV mode yet (`--delimiter $'\t'` gets you tab-separated

@@ -1,4 +1,5 @@
 import { Transform, TransformCallback } from 'node:stream';
+import { Alignment, separatorCell } from './alignment.js';
 
 function forMarkdownCell(field: string): string {
   // A table row is one line, so a literal newline in a CSV field has to
@@ -9,6 +10,11 @@ function forMarkdownCell(field: string): string {
 export interface CsvToMarkdownOptions {
   /** Field delimiter used by the input CSV. Defaults to ','. */
   delimiter?: string;
+  /**
+   * Alignment per column, in order. Columns past the end of the list, or
+   * marked 'none', get a plain `---` separator.
+   */
+  alignments?: Alignment[];
 }
 
 /**
@@ -24,6 +30,7 @@ export class CsvToMarkdown extends Transform {
   private headerWritten = false;
   private columnCount = 0;
   private readonly delimiter: string;
+  private readonly alignments: Alignment[];
 
   constructor(options: CsvToMarkdownOptions = {}) {
     super();
@@ -32,6 +39,7 @@ export class CsvToMarkdown extends Transform {
       throw new Error(`delimiter must be a single character, got ${JSON.stringify(delimiter)}`);
     }
     this.delimiter = delimiter;
+    this.alignments = options.alignments ?? [];
   }
 
   _transform(chunk: Buffer, _encoding: BufferEncoding, callback: TransformCallback): void {
@@ -121,7 +129,7 @@ export class CsvToMarkdown extends Transform {
       this.columnCount = rendered.length;
       this.headerWritten = true;
       this.push('| ' + rendered.join(' | ') + ' |\n');
-      this.push('| ' + rendered.map(() => '---').join(' | ') + ' |\n');
+      this.push('| ' + rendered.map((_, i) => separatorCell(this.alignments[i])).join(' | ') + ' |\n');
       return;
     }
     // A ragged CSV (fewer/more fields than the header) still has to produce
